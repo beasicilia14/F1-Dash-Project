@@ -33,7 +33,7 @@ compound_colors = {
 season_events = fastf1.get_event_schedule(2023)["EventName"]
 
 app.layout = html.Div(children=[
-    html.H1(children='Formula 1 Race Analysis', style={'color':'red', 'textAlign':'center'}),
+    html.H1(children='FORMULA 1 RACE ANALYSIS', style={'color':'white', 'textAlign':'center', 'background-color':'#ff1801'}),
 
     html.Div([
         dcc.Dropdown(
@@ -45,7 +45,7 @@ app.layout = html.Div(children=[
         dcc.Store(id='selected-gp')
     ], style={'margin': '20px', 'textAlign': 'center'}),
 
-    html.H2("Race Summary"),
+    html.H2(children="Race Summary"),
 
     html.Div([
         dcc.Graph(id='lap-time-graph'),
@@ -79,7 +79,7 @@ app.layout = html.Div(children=[
         ),
     ], style={'display': 'flex', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
 
-    html.Hr(),
+    html.Hr(style={'border': '1px solid red'}),
 
     html.H2("Information per Driver"),
 
@@ -104,7 +104,7 @@ app.layout = html.Div(children=[
     dcc.Dropdown(id='lap-dropdown', style={'width': '50%'}),
     dcc.Graph(id='telemetry-graph'),] ),
 
-    html.Hr(),
+    html.Hr(style={'border': '1px solid red'}),
 
     html.H2("ML Model"),
     dcc.Graph(id='feature-importances')

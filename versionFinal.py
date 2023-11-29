@@ -9,6 +9,15 @@ import plotly.graph_objects as go
 import dash
 from dash import dcc, html
 
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.impute import SimpleImputer
+import matplotlib.pyplot as plt
+import fastf1
+from sklearn.preprocessing import LabelEncoder
+
+
 # ... (existing imports)
 
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
@@ -93,17 +102,15 @@ app.layout = html.Div(children=[
     
     html.Label("Select a lap:"),
     dcc.Dropdown(id='lap-dropdown', style={'width': '50%'}),
-    dcc.Graph(id='telemetry-graph'),] )
+    dcc.Graph(id='telemetry-graph'),] ),
+
+    html.Hr(),
+
+    html.H2("ML Model"),
+    dcc.Graph(id='feature-importances')
 
 ] , style={'fontFamily': 'Helvetica, Arial, sans-serif'})
 
-# ... (existing callbacks and app.run_server)
-
-
-# Callback to update the selected Grand Prix and trigger next step
-# ... (existing imports)
-
-# ... (existing layout)
 
 # Callback to update the lap-time-graph with the position evolution graph for all drivers
 @app.callback(
@@ -166,9 +173,75 @@ def update_selected_gp_and_graph(n_clicks, selected_gp_name):
     
     return selected_gp_data, datatable_data, driver_dropdown_options
 
-# ... (existing callbacks)
 
-# ... (existing layout)
+# Callback to do the ML model 
+@app.callback(
+    Output('feature-importances', 'figure'),
+    [Input('next-button', 'n_clicks')],
+    [State('grand-prix-dropdown', 'value')]
+)
+def create_model_and_visualization(n_clicks, selected_gp_name):
+    selected_gp_session = fastf1.get_session(2023, selected_gp_name, "Race")
+    selected_gp_session.load()
+    selected_gp_df = selected_gp_session.laps
+    df= selected_gp_df
+    # Convert LapTime to seconds
+    df['LapTime_seconds'] = df['LapTime'].dt.total_seconds()
+    
+    # Example: Features (X) and Target (y)
+    feature_columns = ['LapNumber', 'Stint',
+                        'SpeedI1', 'SpeedI2', 'SpeedFL', 'SpeedST', 
+                        'Compound', 'TyreLife', 'FreshTyre', 'TrackStatus']
+
+    X = df[feature_columns].copy()  # Create a copy of the DataFrame
+    y = df['LapTime_seconds']  # Use the converted LapTime column
+
+    # Label encode categorical columns
+    le = LabelEncoder()
+    X['Compound'] = le.fit_transform(X['Compound'])
+
+    # Split the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Impute missing values in features
+    imputer = SimpleImputer(strategy='mean')
+    X_train_imputed = pd.DataFrame(imputer.fit_transform(X_train), columns=X_train.columns)
+
+    # Impute missing values in the target variable
+    imputer_y = SimpleImputer(strategy='mean')
+    y_train_imputed = imputer_y.fit_transform(y_train.values.reshape(-1, 1))
+
+    # Initialize the Gradient Boosting Regressor
+    gb_model = GradientBoostingRegressor(n_estimators=100, random_state=42)
+
+    # Fit the model to the training data with imputed values
+    gb_model.fit(X_train_imputed, y_train_imputed.ravel())
+
+    # Get feature importances
+    feature_importances = pd.Series(gb_model.feature_importances_, index=X.columns)
+
+    # Sort feature importances in descending order
+    sorted_feature_importances = feature_importances.sort_values(ascending=False)
+    print(sorted_feature_importances)
+    # Create an interactive bar chart for the feature importances
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=sorted_feature_importances.index, y=sorted_feature_importances.values))
+
+    fig.update_layout(
+        title='Gradient Boosting Feature Importance for Lap Time Prediction',
+        xaxis_title='Features',
+        yaxis_title='Importance',
+        height=500,
+        width=800,
+    )
+
+    return fig
+
+    
+
+
+
+
 
 
 
@@ -192,6 +265,7 @@ def update_lap_dropdown_options(selected_driver, selected_gp_data):
     lap_dropdown_options = [{'label': f'Lap {lap}', 'value': lap} for lap in driver_laps]
 
     return lap_dropdown_options, driver_laps.min()  # Set default value to the minimum lap number
+
 
 # Callback to update the compound usage plot based on the selected driver
 @app.callback(
@@ -280,20 +354,11 @@ def update_graph(selected_lap, selected_driver, selected_gp_data):
                   labels={'value': 'Value', 'SessionTime': 'Time (seconds)'},
                   title=f'Telemetry Variables for Lap {selected_lap}')
 
-    # Add vertical line for lap start
-    fig.add_shape(
-        go.layout.Shape(
-            type="line",
-            x0=lap_time,
-            x1=lap_time,
-            y0=0,
-            y1=1,
-            line=dict(color="red", width=2)
-        )
-    )
-
     return fig
 # ...
+
+
+
 
 # Run the app
 if __name__ == '__main__':

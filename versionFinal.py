@@ -33,6 +33,15 @@ compound_colors = {
 season_events = fastf1.get_event_schedule(2023)["EventName"]
 
 app.layout = html.Div(children=[
+    html.Img(
+        src='https://cdn.motor1.com/images/mgl/O487B/s1/nuevo-logo-de-f1-2018.jpg',
+        style={
+            'width': '100px',
+            'height': '100px',
+            'margin': 'auto',
+            'display': 'block',
+        }), 
+        
     html.H1(children='FORMULA 1 RACE ANALYSIS', style={'color':'white', 'textAlign':'center', 'background-color':'#ff1801'}),
 
     html.Div([
@@ -106,8 +115,14 @@ app.layout = html.Div(children=[
 
     html.Hr(style={'border': '1px solid red'}),
 
-    html.H2("ML Model"),
-    dcc.Graph(id='feature-importances')
+    html.Div([
+        html.H2("ML Model"),
+        dcc.Graph(id='feature-importances')
+    ]),
+    
+    html.Footer(children="Author: Beatriz Sicilia   ", style={'color': 'white','textAlign': 'right','background-color':'#ff1801'})
+
+
 
 ] , style={'fontFamily': 'Helvetica, Arial, sans-serif'})
 
@@ -135,7 +150,9 @@ def update_position_evolution_graph_all_drivers(n_clicks, selected_gp_name):
     fig.update_layout(
         xaxis_title='Lap Number',
         yaxis_title='Position',
+        plot_bgcolor ='white'
     )
+ 
 
     return fig
 
@@ -222,7 +239,6 @@ def create_model_and_visualization(n_clicks, selected_gp_name):
 
     # Sort feature importances in descending order
     sorted_feature_importances = feature_importances.sort_values(ascending=False)
-    print(sorted_feature_importances)
     # Create an interactive bar chart for the feature importances
     fig = go.Figure()
     fig.add_trace(go.Bar(x=sorted_feature_importances.index, y=sorted_feature_importances.values))
@@ -233,7 +249,9 @@ def create_model_and_visualization(n_clicks, selected_gp_name):
         yaxis_title='Importance',
         height=500,
         width=800,
+        plot_bgcolor ='white',
     )
+    
 
     return fig
 
@@ -276,7 +294,16 @@ def update_lap_dropdown_options(selected_driver, selected_gp_data):
 def update_compound_plot(selected_driver, selected_gp_data):
     if selected_gp_data is None or 'selected_gp_name' not in selected_gp_data:
         # If selected_gp_data is None or incomplete, return an empty figure or handle it appropriately
-        return px.line()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=[], y=[]))  # You can add an empty trace or customize as needed
+        fig.update_layout(
+            title="Please choose a Driver",
+            xaxis_title="X Axis",
+            yaxis_title="Y Axis",
+            showlegend=False,  # You can customize legend visibility as needed
+            plot_bgcolor="white"
+        )
+        return fig
 
     selected_gp_name = selected_gp_data['selected_gp_name']
     selected_gp_df = pd.read_json(selected_gp_data['selected_gp_df'])
@@ -298,6 +325,7 @@ def update_compound_plot(selected_driver, selected_gp_data):
         xaxis_title='Lap',
         yaxis_title='',
         legend_title='Compound',
+        plot_bgcolor ='white',
     )
 
     return fig
@@ -313,7 +341,16 @@ def update_compound_plot(selected_driver, selected_gp_data):
 def update_graph(selected_lap, selected_driver, selected_gp_data):
     if selected_gp_data is None or 'selected_gp_name' not in selected_gp_data:
         # If selected_gp_data is None or incomplete, return an empty figure or handle it appropriately
-        return go.Figure()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=[], y=[]))  # You can add an empty trace or customize as needed
+        fig.update_layout(
+            title="Please choose a Lap",
+            xaxis_title="X Axis",
+            yaxis_title="Y Axis",
+            showlegend=False,  # You can customize legend visibility as needed
+            plot_bgcolor="white"
+        )
+        return fig
 
 
     selected_gp_name = selected_gp_data['selected_gp_name']
@@ -348,11 +385,16 @@ def update_graph(selected_lap, selected_driver, selected_gp_data):
     
     # Filter telemetry data for the selected lap using .loc to avoid the warning
     selected_lap_data = telem.loc[(telem['SessionTime'] >= lap_time) & (telem['SessionTime'] <= lap_start_times[selected_lap_index + 1])].copy()
-
+    selected_lap_data['RPM (X100)'] = selected_lap_data['RPM']/100 
     # Create an interactive line chart for the selected lap
-    fig = px.line(selected_lap_data, x='SessionTime', y=['RPM', 'Speed', 'Throttle', 'nGear'],
+    fig = px.line(selected_lap_data, x='SessionTime', y=[ 'RPM (X100)', 'Speed', 'Throttle', 'nGear'],
                   labels={'value': 'Value', 'SessionTime': 'Time (seconds)'},
                   title=f'Telemetry Variables for Lap {selected_lap}')
+
+    
+    fig.update_layout(
+        plot_bgcolor ='white',
+    )
 
     return fig
 # ...

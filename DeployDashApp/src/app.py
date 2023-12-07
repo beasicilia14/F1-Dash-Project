@@ -21,6 +21,7 @@ from sklearn.preprocessing import LabelEncoder
 # ... (existing imports)
 
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
+server = app.server
 
 compound_colors = {
     'SOFT': 'red',
